@@ -47,3 +47,4 @@
 2024-01-03T12:11:26 +0800 — Sedikit clean up before sleep 😴
 2024-01-03T17:11:44 +0800 — Final commit for today 🌙
 2024-01-04T22:39:46 +0800 — Final commit for today 🌙
+2024-01-04T09:04:26 +0800 — Improved logic (finally works lol) 😂
