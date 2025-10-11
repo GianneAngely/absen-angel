@@ -7,3 +7,4 @@
 2025-10-09T12:47:24 +0800 — nambah dokumentasi 📝
 2025-10-10T12:36:52 +0800 — fix bug kecil 🐞
 2025-10-10T09:19:16 +0800 — fix bug kecil 🐞
+2025-10-11T18:21:58 +0800 — nambah dokumentasi 📝
