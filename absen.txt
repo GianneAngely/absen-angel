@@ -16,3 +16,4 @@
 2025-10-14T18:33:12 +0800 — update readme 📄
 2025-10-14T14:09:54 +0800 — fix bug kecil 🐞
 2025-10-14T09:11:30 +0800 — nambah dokumentasi 📝
+2025-10-15T09:22:20 +0800 — nambah dokumentasi 📝
