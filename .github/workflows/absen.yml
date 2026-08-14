@@ -1,0 +1,73 @@
+name: absen
+
+on:
+  schedule:
+    # 19:00 UTC = 03:00 WITA (+08:00). Jadi tiap dini hari, script ngisi
+    # absen untuk HARI KEMARIN yang baru saja selesai. Sengaja kemarin, bukan
+    # hari ini — supaya jam 09:00-22:00 yang di-generate dijamin sudah lewat
+    # berapa pun telatnya cron GitHub jalan. Nggak ada commit bertanggal depan.
+    - cron: '0 19 * * *'
+
+  # Buat nambal manual lewat tab Actions > absen > Run workflow.
+  workflow_dispatch:
+    inputs:
+      from:
+        description: 'Isi dari tanggal (YYYY-MM-DD). Kosongkan = 7 hari terakhir.'
+        required: false
+      to:
+        description: 'Isi sampai tanggal (YYYY-MM-DD). Kosongkan = kemarin.'
+        required: false
+      dry_run:
+        description: 'Cuma lihat rencananya, tanpa commit'
+        type: boolean
+        default: false
+
+# Jangan sampai dua run jalan barengan dan saling tabrakan pas push.
+concurrency:
+  group: absen
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  absen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Script perlu baca seluruh riwayat buat tahu hari mana yang sudah
+          # terisi. Tanpa ini dia bakal nimpa hari yang sudah ada commitnya.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate absen
+        env:
+          ABSEN_NAME: Gianne Angely
+          ABSEN_EMAIL: 4n93ly22@gmail.com
+          # Lewat env, bukan diinterpolasi langsung ke baris bash — biar isi
+          # input nggak bisa bocor jadi perintah shell.
+          IN_FROM: ${{ inputs.from }}
+          IN_TO: ${{ inputs.to }}
+          IN_DRY: ${{ inputs.dry_run }}
+        run: |
+          args=()
+          if [ -n "$IN_FROM" ]; then args+=("--from=$IN_FROM"); fi
+          if [ -n "$IN_TO" ]; then args+=("--to=$IN_TO"); fi
+          if [ "$IN_DRY" = "true" ]; then args+=("--dry-run"); fi
+          node tools/absen.mjs "${args[@]}"
+
+      - name: Push
+        if: inputs.dry_run != true
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          # Kalau hari itu di-roll "libur", nggak ada commit baru — dan itu normal.
+          if [ "$(git rev-list --count "origin/$BRANCH..HEAD")" = "0" ]; then
+            echo "Nggak ada commit baru, skip push."
+            exit 0
+          fi
+          git push origin "HEAD:$BRANCH"
