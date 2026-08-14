@@ -13,17 +13,17 @@ on:
   workflow_dispatch:
     inputs:
       from:
-        description: 'Isi dari tanggal (YYYY-MM-DD). Kosongkan = 7 hari terakhir.'
+        description: 'Fill starting from this date (YYYY-MM-DD). Leave empty for the last 7 days.'
         required: false
       to:
-        description: 'Isi sampai tanggal (YYYY-MM-DD). Kosongkan = kemarin.'
+        description: 'Fill up to this date (YYYY-MM-DD). Leave empty for yesterday.'
         required: false
       dry_run:
-        description: 'Cuma lihat rencananya, tanpa commit'
+        description: 'Only show the plan, do not commit anything'
         type: boolean
         default: false
       seal_gaps:
-        description: 'Tambal jeda yang lebih dari sehari di rentang from..to'
+        description: 'Patch any gap longer than a single day inside the from..to range'
         type: boolean
         default: false
 
