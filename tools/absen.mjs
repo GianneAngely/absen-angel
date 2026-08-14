@@ -158,16 +158,16 @@ function fileStyle() {
 
 /**
  * Jam-jam commit untuk satu hari. Sengaja TIDAK diurutkan, mengikuti pola lama.
- * `force` dipakai waktu hari itu WAJIB terisi (lihat aturan jeda maks 1 hari) —
- * undian libur/tidaknya diabaikan, tapi undian jumlah & jamnya tetap jalan
+ * `mustFill` dipakai waktu hari itu WAJIB terisi (lihat aturan jeda maks 1 hari)
+ * — undian libur/tidaknya diabaikan, tapi undian jumlah & jamnya tetap jalan
  * supaya isinya tetap terlihat wajar.
  */
-function planDay(iso, { force = false } = {}) {
+function planDay(iso, { mustFill = false } = {}) {
   const rnd = rngFor(iso);
   const weekend = isWeekend(iso);
 
   const active = rnd() <= (weekend ? P_ACTIVE_WEEKEND : P_ACTIVE_WEEKDAY);
-  if (!active && !force) return [];
+  if (!active && !mustFill) return [];
 
   const n = weightedIndex(rnd, weekend ? WEIGHTS_WEEKEND : WEIGHTS_WEEKDAY) + 1;
   return Array.from({ length: n }, () => ({
@@ -189,6 +189,15 @@ const arg = (name, fallback) => {
 };
 const dryRun = argv.includes('--dry-run');
 const sealGaps = argv.includes('--seal-gaps');
+
+// --force: bikin commit baru walaupun hari itu SUDAH ada commitnya.
+//
+// Perlu karena GitHub cuma memproses ~1000 commit per sekali push dan membuang
+// sisanya yang paling tua — commit yang kebuang itu nggak pernah diproses ulang.
+// Satu-satunya cara menghijaukannya adalah menambah commit BARU di tanggal yang
+// sama, lalu push bertahap di bawah batas itu.
+const force = argv.includes('--force');
+const filled = (d) => !force && done.has(d);
 
 // Hari ini baru boleh diisi kalau jendela 09:00-22:59 sudah lewat SELURUHNYA,
 // makanya cron-nya jam 23:00 lokal. Kalau run-nya telat sampai lewat tengah
@@ -222,7 +231,7 @@ if (sealGaps) {
   // penuh yang justru kelihatan bot.
   let run = [];
   const flush = () => {
-    if (run.length >= 2) for (const d of run.slice(1)) push(d, planDay(d, { force: true }));
+    if (run.length >= 2) for (const d of run.slice(1)) push(d, planDay(d, { mustFill: true }));
     run = [];
   };
   for (let d = from; d <= to; d = addDays(d, 1)) {
@@ -236,8 +245,8 @@ if (sealGaps) {
   // berturut-turut jadi mustahil.
   let prevFilled = done.has(addDays(from, -1));
   for (let d = from; d <= to; d = addDays(d, 1)) {
-    if (done.has(d)) { prevFilled = true; continue; } // sudah ada, jangan ditumpuk
-    const commits = planDay(d, { force: !prevFilled });
+    if (filled(d)) { prevFilled = true; continue; } // sudah ada, jangan ditumpuk
+    const commits = planDay(d, { mustFill: !prevFilled });
     push(d, commits);
     prevFilled = commits.length > 0;
   }
@@ -262,7 +271,7 @@ if (dryRun) {
 
   for (let d = from; d <= to; d = addDays(d, 1)) {
     const hari = NAMA[dayOf(d).getUTCDay()];
-    if (done.has(d)) console.log(`  ${d} (${hari})  sudah ada, dilewati`);
+    if (filled(d)) console.log(`  ${d} (${hari})  sudah ada, dilewati`);
     else if (perDay.has(d)) console.log(`  ${d} (${hari})  ${perDay.get(d)} commit`);
     else console.log(`  ${d} (${hari})  libur`);
   }
