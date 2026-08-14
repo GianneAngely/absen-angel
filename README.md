@@ -1,16 +1,16 @@
-# Absen Angel 🌸
+# Green Squares 🌱
 
 🟩🟩🟩⬜🟩🟩🟩🟩⬜🟩🟩🟩🟩🟩⬜⬜🟩🟩🟩🟩🟩⬜🟩🟩🟩
 
-Hey there 👋 welcome to the most useless repo I have ever made.
+Hey there 👋 this repo does absolutely nothing, and honestly that is the whole point.
 
-![a very focused cat typing on a laptop](https://media.giphy.com/media/aNqEFrYVnsS52/giphy.gif)
+![a kitten typing at a tiny computer desk](https://media.giphy.com/media/Sm9AfJRiZofjlrkAAl/giphy.gif)
 
 *me, allegedly, every single day for two years straight*
 
 ## So what is this
 
-There is exactly one file in here called absen.txt. Every line has a date and a random sentence about coding. That is the whole thing. No app, no features, nothing you can actually run.
+There is exactly one text file in here. Every line has a date and a random sentence about coding. That is the whole thing. No app, no features, nothing you can actually run.
 
 Think of it like a school attendance book, except I am the only student and there is no teacher wkwk 📝
 
@@ -32,7 +32,7 @@ If you want to see the stuff I actually build, go check my other repos 🚀
 
 Turns out git stores two separate dates on every commit, and you can set both of them to whatever you want. GitHub draws the green graph from one of those. So a commit I make today can quietly land on a square from last June 🤯
 
-There is a small script in the tools folder that handles all of it. It decides how many times to sign in on a given day, what time, and which sentence to write. I tuned the pattern so it looks like an actual human, which means weekends are lazier and nothing ever gets committed at three in the morning.
+There is a small script in the tools folder that handles all of it. It decides how many times to check in on a given day, what time, and which sentence to write. I tuned the pattern so it looks like an actual human, which means weekends are lazier and nothing ever gets committed at three in the morning.
 
 Then GitHub Actions runs it every night and fills in that day for me. I do not have to touch it anymore, it just keeps going on its own 🌙
 
