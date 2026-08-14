@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generator absen — nulis satu baris ke absen.txt per commit, dengan tanggal
+ * Generator absen — nulis satu baris ke log.txt per commit, dengan tanggal
  * commit yang di-backdate persis sama dengan timestamp di barisnya.
  *
  * Dipakai dua cara:
@@ -20,10 +20,13 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), '..');
-const FILE = join(REPO, 'absen.txt');
+// Nama file cuma didefinisikan di sini. Dulu sempat kesebar di dua tempat dan
+// itu bikin rename gampang bikin script-nya patah separuh.
+const FILE_NAME = 'log.txt';
+const FILE = join(REPO, FILE_NAME);
 
 // Zona waktu yang dipakai di seluruh riwayat repo ini (WITA, tanpa DST).
-const TZ = '+0800';      // dipakai di baris absen.txt (format lama dipertahankan)
+const TZ = '+0800';      // dipakai di baris log.txt (format lama dipertahankan)
 const TZ_ISO = '+08:00'; // dipakai buat git, yang mau ISO-8601 ketat
 const TZ_MIN = 8 * 60;
 
@@ -287,7 +290,7 @@ for (const p of plan) {
 
   appendFileSync(FILE, line + style.eol, 'utf8');
 
-  git(['add', '--', 'absen.txt']);
+  git(['add', '--', FILE_NAME]);
   git(['commit', '-m', p.msg], {
     // Author DAN committer date dua-duanya diset. Kalau cuma --date, committer
     // date-nya ikut jam sekarang dan riwayatnya langsung kelihatan janggal.
