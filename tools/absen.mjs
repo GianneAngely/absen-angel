@@ -123,9 +123,10 @@ function addDays(iso, n) {
   return isoOf(d);
 }
 
-/** Tanggal hari ini menurut waktu lokal TZ, bukan UTC. */
-function todayLocal() {
-  return new Date(Date.now() + TZ_MIN * 60_000).toISOString().slice(0, 10);
+/** Tanggal & jam sekarang menurut waktu lokal TZ, bukan UTC. */
+function nowLocal() {
+  const d = new Date(Date.now() + TZ_MIN * 60_000);
+  return { date: d.toISOString().slice(0, 10), hour: d.getUTCHours() };
 }
 
 const isWeekend = (iso) => [0, 6].includes(dayOf(iso).getUTCDay());
@@ -155,12 +156,18 @@ function fileStyle() {
 
 // ---------------------------------------------------------------- rencana
 
-/** Jam-jam commit untuk satu hari. Sengaja TIDAK diurutkan, mengikuti pola lama. */
-function planDay(iso) {
+/**
+ * Jam-jam commit untuk satu hari. Sengaja TIDAK diurutkan, mengikuti pola lama.
+ * `force` dipakai waktu hari itu WAJIB terisi (lihat aturan jeda maks 1 hari) —
+ * undian libur/tidaknya diabaikan, tapi undian jumlah & jamnya tetap jalan
+ * supaya isinya tetap terlihat wajar.
+ */
+function planDay(iso, { force = false } = {}) {
   const rnd = rngFor(iso);
   const weekend = isWeekend(iso);
 
-  if (rnd() > (weekend ? P_ACTIVE_WEEKEND : P_ACTIVE_WEEKDAY)) return [];
+  const active = rnd() <= (weekend ? P_ACTIVE_WEEKEND : P_ACTIVE_WEEKDAY);
+  if (!active && !force) return [];
 
   const n = weightedIndex(rnd, weekend ? WEIGHTS_WEEKEND : WEIGHTS_WEEKDAY) + 1;
   return Array.from({ length: n }, () => ({
@@ -181,11 +188,15 @@ const arg = (name, fallback) => {
   return hit ? hit.slice(name.length + 3) : fallback;
 };
 const dryRun = argv.includes('--dry-run');
+const sealGaps = argv.includes('--seal-gaps');
 
-// Default: lihat balik 7 hari sampai KEMARIN. Kenapa kemarin dan bukan hari
-// ini — supaya jam 09:00-22:00 yang di-generate dijamin sudah lewat, berapa
-// pun telatnya cron GitHub Actions jalan. Nggak ada commit bertanggal masa depan.
-const to = arg('to', addDays(todayLocal(), -1));
+// Hari ini baru boleh diisi kalau jendela 09:00-22:59 sudah lewat SELURUHNYA,
+// makanya cron-nya jam 23:00 lokal. Kalau run-nya telat sampai lewat tengah
+// malam, `date` sudah pindah ke besok tapi `hour` jadi kecil, jadi otomatis
+// mundur ke hari yang benar. Efeknya: tidak pernah ada commit bertanggal masa
+// depan, dan kotak hari ini tetap ijo di hari yang sama.
+const { date: localDate, hour: localHour } = nowLocal();
+const to = arg('to', localHour > HOUR_MAX ? localDate : addDays(localDate, -1));
 const from = arg('from', addDays(to, -6));
 
 if (from > to) {
@@ -202,9 +213,34 @@ if (style.text && !style.text.endsWith(style.eol)) {
 }
 
 const plan = [];
-for (let d = from; d <= to; d = addDays(d, 1)) {
-  if (done.has(d)) continue; // hari ini sudah ada commitnya, jangan ditumpuk
-  for (const c of planDay(d)) plan.push({ date: d, ...c });
+const push = (d, commits) => { for (const c of commits) plan.push({ date: d, ...c }); };
+
+if (sealGaps) {
+  // Mode sekali-pakai: cari deretan hari kosong yang panjangnya >= 2, lalu isi
+  // semuanya KECUALI hari pertama. Jadi jeda 2 hari menyusut jadi 1 hari, dan
+  // jeda yang sudah 1 hari dibiarkan apa adanya — biar grafiknya nggak 100%
+  // penuh yang justru kelihatan bot.
+  let run = [];
+  const flush = () => {
+    if (run.length >= 2) for (const d of run.slice(1)) push(d, planDay(d, { force: true }));
+    run = [];
+  };
+  for (let d = from; d <= to; d = addDays(d, 1)) {
+    if (done.has(d)) flush();
+    else run.push(d);
+  }
+  flush();
+} else {
+  // Aturan jeda maks 1 hari: kalau kemarin kosong, hari ini wajib terisi.
+  // Karena tiap hari kosong memaksa hari sesudahnya terisi, dua hari kosong
+  // berturut-turut jadi mustahil.
+  let prevFilled = done.has(addDays(from, -1));
+  for (let d = from; d <= to; d = addDays(d, 1)) {
+    if (done.has(d)) { prevFilled = true; continue; } // sudah ada, jangan ditumpuk
+    const commits = planDay(d, { force: !prevFilled });
+    push(d, commits);
+    prevFilled = commits.length > 0;
+  }
 }
 
 if (plan.length === 0) {
@@ -217,10 +253,19 @@ console.log(`Rentang : ${from} .. ${to}`);
 console.log(`Rencana : ${plan.length} commit tersebar di ${days} hari`);
 
 if (dryRun) {
-  for (const p of plan.slice(0, 15)) {
-    console.log(`  ${p.date}T${pad(p.hh)}:${pad(p.mm)}:${pad(p.ss)} ${TZ} — ${p.msg}`);
+  // Rekap per hari, bukan daftar commit yang dipotong — daftar yang dipotong
+  // bikin hari-hari di ekor rentang kelihatan seolah libur padahal cuma
+  // kepotong tampilannya.
+  const NAMA = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+  const perDay = new Map();
+  for (const p of plan) perDay.set(p.date, (perDay.get(p.date) ?? 0) + 1);
+
+  for (let d = from; d <= to; d = addDays(d, 1)) {
+    const hari = NAMA[dayOf(d).getUTCDay()];
+    if (done.has(d)) console.log(`  ${d} (${hari})  sudah ada, dilewati`);
+    else if (perDay.has(d)) console.log(`  ${d} (${hari})  ${perDay.get(d)} commit`);
+    else console.log(`  ${d} (${hari})  libur`);
   }
-  if (plan.length > 15) console.log(`  ... (+${plan.length - 15} lagi)`);
   console.log('\n--dry-run: tidak ada yang di-commit.');
   process.exit(0);
 }

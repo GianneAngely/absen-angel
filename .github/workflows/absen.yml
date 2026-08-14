@@ -2,11 +2,12 @@ name: absen
 
 on:
   schedule:
-    # 19:00 UTC = 03:00 WITA (+08:00). Jadi tiap dini hari, script ngisi
-    # absen untuk HARI KEMARIN yang baru saja selesai. Sengaja kemarin, bukan
-    # hari ini — supaya jam 09:00-22:00 yang di-generate dijamin sudah lewat
-    # berapa pun telatnya cron GitHub jalan. Nggak ada commit bertanggal depan.
-    - cron: '0 19 * * *'
+    # 15:00 UTC = 23:00 WITA (+08:00). Jam segini jendela commit 09:00-22:59
+    # sudah lewat seluruhnya, jadi absen HARI INI bisa langsung diisi dan
+    # kotaknya ijo di hari yang sama — tanpa risiko commit bertanggal masa
+    # depan. Kalau cron-nya telat sampai lewat tengah malam, script otomatis
+    # mundur ngisi hari kemarin (lihat perhitungan `to` di tools/absen.mjs).
+    - cron: '0 15 * * *'
 
   # Buat nambal manual lewat tab Actions > absen > Run workflow.
   workflow_dispatch:
@@ -19,6 +20,10 @@ on:
         required: false
       dry_run:
         description: 'Cuma lihat rencananya, tanpa commit'
+        type: boolean
+        default: false
+      seal_gaps:
+        description: 'Tambal jeda yang lebih dari sehari di rentang from..to'
         type: boolean
         default: false
 
@@ -53,11 +58,13 @@ jobs:
           IN_FROM: ${{ inputs.from }}
           IN_TO: ${{ inputs.to }}
           IN_DRY: ${{ inputs.dry_run }}
+          IN_SEAL: ${{ inputs.seal_gaps }}
         run: |
           args=()
           if [ -n "$IN_FROM" ]; then args+=("--from=$IN_FROM"); fi
           if [ -n "$IN_TO" ]; then args+=("--to=$IN_TO"); fi
           if [ "$IN_DRY" = "true" ]; then args+=("--dry-run"); fi
+          if [ "$IN_SEAL" = "true" ]; then args+=("--seal-gaps"); fi
           node tools/absen.mjs "${args[@]}"
 
       - name: Push
