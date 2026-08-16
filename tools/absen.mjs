@@ -49,11 +49,15 @@ const HOUR_MAX = 22;
 const P_ACTIVE_WEEKDAY = 1.0;
 const P_ACTIVE_WEEKEND = 0.778;
 
-// Bobot jumlah commit per hari-aktif (index 0 = 1 commit, dst), langsung dari
-// histogram periode acuan. Outlier 9/10/18 commit sengaja dibuang — itu artefak
-// hari batch lama dijalankan, bukan pola beneran.
-const WEIGHTS_WEEKDAY = [44, 52, 44, 41, 50, 46, 54, 48]; // 1..8 commit
-const WEIGHTS_WEEKEND = [31, 41, 46];                     // 1..3 commit
+// Bobot jumlah commit per hari-aktif (index 0 = 1 commit, dst).
+//
+// Angka ini dinaikkan supaya kotaknya lebih gelap. GitHub nentuin warna pakai
+// KUARTIL dari riwayat kita sendiri, bukan angka mutlak, jadi naikin semua
+// secara merata percuma — kuartilnya ikut naik dan warnanya sama saja. Yang
+// manjur itu ngosongin ekor bawah: dulu 118 hari numpuk di 1-2 commit dan
+// semuanya kekunci di warna paling terang. Sekarang hari kerja mulai dari 6.
+const WEIGHTS_WEEKDAY = [0, 0, 0, 0, 0, 30, 38, 44, 46, 42, 34, 26]; // 1..12 commit
+const WEIGHTS_WEEKEND = [0, 18, 30, 34, 26];                         // 1..5 commit
 
 const MESSAGES = [
   'Quick patch for something weird 😅',
